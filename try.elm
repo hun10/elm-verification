@@ -176,20 +176,24 @@ spec = All Nat (\x ->
                )
 
 
-axiom = All Nat (\x ->
-                  Conj [ Exists Nat (\y -> suc (x, y))
-                       ]
-               )
+axiom = All Nat (\x -> Exists Nat (\y -> suc (x, y)))
 
 
 mocked = mock spec
 
 
+call mImpl arg =
+  mImpl *> \(IFun fun) ->
+    fun arg
+
+
 byhand axiom =
-  axiom
+  unit <|
+    IFun (\x ->
+      let r = call axiom x in
+        unit <| IList [r, r])
 
 
 main = show <|
   (check (spec, byhand (mock axiom))
   ) { lastId = 0, errors = [] }
-
