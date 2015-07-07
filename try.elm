@@ -61,6 +61,7 @@ type Spec
   | Error
   | Pred Predicate
   | Conj (List Spec)
+  | Imp Spec Spec
   | All (Id -> Type) (Spec -> Spec)
   | Exists (Id -> Type) (Spec -> Spec)
 
@@ -95,6 +96,14 @@ mock spec =
     Conj list ->
       unit <| IList
         (List.map mock list)
+    
+    Imp s1 s2 ->
+      unit <| IFun (\arg ->
+        check (s1, unit arg) *> \chk ->
+          if chk then
+            mock s2
+          else
+            unit IError)
     
     All typeC specC ->
       unit <| IFun (\arg ->
@@ -145,6 +154,14 @@ check (spec, impl) =
           else
             error (spec, x)
         
+        otherwise ->
+          error (spec, x)
+    
+    Imp s1 s2 ->
+      impl *> \x -> case x of
+        IFun fun ->
+          mock s1 *> fun *> \r ->
+            check (s2, unit r)
         otherwise ->
           error (spec, x)
     
