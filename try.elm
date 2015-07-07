@@ -6,6 +6,7 @@ type alias Id =
 
 type alias Ctx =
   { lastId : Id
+  , errors : List (Spec, Impl)
   }
 
 type alias M a =
@@ -19,8 +20,16 @@ newId ctx =
   let id = ctx.lastId + 1 in
     (id, { ctx | lastId <- id })
 
+error : (Spec, Impl) -> M Bool
+error msg ctx =
+  (False, { ctx | errors <- ctx.errors ++ [msg] })
+
 (*>) : M a -> (a -> M b) -> M b
 (*>) first second ctx = first ctx |> uncurry second
+
+foldM : (a -> b -> b) -> M b -> List (M a) -> M b
+foldM folder start list =
+  start
 
 type Type
   = Nat Id
@@ -79,6 +88,51 @@ mock spec =
         let t = typeC id in
           unit <| IWitness (IPrim t) (mock <| specC (Prim t))
 
+check : (Spec, M Impl) -> M Bool
+check (spec, impl) =
+  case spec of
+    Prim t ->
+      impl *> \x -> case x of
+        IPrim t' ->
+          unit (t == t')
+        otherwise ->
+          error (spec, x)
+    
+    Pred p ->
+      impl *> \x -> case x of
+        IPred p' ->
+          unit (p == p')
+        otherwise ->
+          error (spec, x)
+    
+    Conj lst ->
+      impl *> \x -> case x of
+        IList lst' ->
+          List.map2 (,) lst lst' |>
+            List.map check |>
+              foldM (&&) (unit True)
+        otherwise ->
+          error (spec, x)
+    
+    All tc sc ->
+      impl *> \x -> case x of
+        IFun fun ->
+          newId *> \id ->
+            let v = tc id
+                s = sc (Prim v) in
+              check (s, fun (IPrim v))
+        otherwise ->
+          error (spec, x)
+    
+    Exists tc sc ->
+      impl *> \x -> case x of
+        IWitness (IPrim t) i ->
+          let s = sc (Prim t) in
+            check (s, i)
+        otherwise ->
+          error (spec, x)
+
+
 spec = All Nat (\x ->
                   Conj [ Exists Nat (\y -> suc (x, y))
                        , Exists Nat (\y -> suc (y, y))
@@ -88,14 +142,5 @@ spec = All Nat (\x ->
 mocked = mock spec
 
 main = show <|
-  (newId *> (\n -> mocked *>
-       (\(IFun x) -> x (IPrim (Nat n)))
-     ) *>
-     (\(IList [a, b]) ->
-       a *> (\(IWitness w x) ->
-         b *> (\(IWitness w' x') ->
-           x
-         )
-       )
-     )
-  ) { lastId = 0 }
+  (check (spec, mocked)
+  ) { lastId = 0, errors = [] }
