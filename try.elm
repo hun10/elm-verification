@@ -1,31 +1,39 @@
 import Graphics.Element exposing (show)
 -- With no disjunction for now.
 
+
 type alias Id =
   Int
+
 
 type alias Ctx =
   { lastId : Id
   , errors : List (Spec, Impl)
   }
 
+
 type alias M a =
   Ctx -> (a, Ctx)
 
+
 unit : a -> M a
 unit v ctx = (v, ctx)
+
 
 newId : M Int
 newId ctx =
   let id = ctx.lastId + 1 in
     (id, { ctx | lastId <- id })
 
+
 error : (Spec, Impl) -> M Bool
 error msg ctx =
   (False, { ctx | errors <- ctx.errors ++ [msg] })
 
+
 (*>) : M a -> (a -> M b) -> M b
 (*>) first second ctx = first ctx |> uncurry second
+
 
 lift : (a -> b -> c) -> (M a -> M b -> M c)
 lift simple =
@@ -34,15 +42,19 @@ lift simple =
       b *> \y ->
         unit (simple x y)
 
+
 foldM : (a -> b -> b) -> M b -> List (M a) -> M b
 foldM folder start list =
   List.foldl (lift folder) start list
 
+
 type Type
   = Nat Id
 
+
 type Predicate
   = Suc (Type, Type)
+
 
 type Spec
   = Prim Type
@@ -52,6 +64,7 @@ type Spec
   | All (Id -> Type) (Spec -> Spec)
   | Exists (Id -> Type) (Spec -> Spec)
 
+
 suc (x, y) =
   case (x, y) of
     (Prim (Nat x), Prim (Nat y)) ->
@@ -60,6 +73,7 @@ suc (x, y) =
     otherwise ->
       Error
 
+
 type Impl
   = IPrim Type
   | IPred Predicate
@@ -67,6 +81,7 @@ type Impl
   | IList (List (M Impl))
   | IFun (Impl -> M Impl)
   | IWitness Impl (M Impl)
+
 
 mock : Spec -> M Impl
 mock spec =
@@ -105,6 +120,7 @@ check (spec, impl) =
             unit True
           else
             error (spec, x)
+        
         otherwise ->
           error (spec, x)
     
@@ -115,6 +131,7 @@ check (spec, impl) =
             unit True
           else
             error (spec, x)
+        
         otherwise ->
           error (spec, x)
     
@@ -127,6 +144,7 @@ check (spec, impl) =
                 foldM (&&) (unit True)
           else
             error (spec, x)
+        
         otherwise ->
           error (spec, x)
     
@@ -137,6 +155,7 @@ check (spec, impl) =
             let v = tc id
                 s = sc (Prim v) in
               check (s, fun (IPrim v))
+        
         otherwise ->
           error (spec, x)
     
@@ -145,6 +164,7 @@ check (spec, impl) =
         IWitness (IPrim t) i ->
           let s = sc (Prim t) in
             check (s, i)
+        
         otherwise ->
           error (spec, x)
 
@@ -155,16 +175,21 @@ spec = All Nat (\x ->
                        ]
                )
 
+
 axiom = All Nat (\x ->
                   Conj [ Exists Nat (\y -> suc (x, y))
                        ]
                )
 
+
 mocked = mock spec
+
 
 byhand axiom =
   axiom
 
+
 main = show <|
   (check (spec, byhand (mock axiom))
   ) { lastId = 0, errors = [] }
+
