@@ -101,23 +101,32 @@ check (spec, impl) =
     Prim t ->
       impl *> \x -> case x of
         IPrim t' ->
-          unit (t == t')
+          if t == t' then
+            unit True
+          else
+            error (spec, x)
         otherwise ->
           error (spec, x)
     
     Pred p ->
       impl *> \x -> case x of
         IPred p' ->
-          unit (p == p')
+          if p == p' then
+            unit True
+          else
+            error (spec, x)
         otherwise ->
           error (spec, x)
     
     Conj lst ->
       impl *> \x -> case x of
         IList lst' ->
-          List.map2 (,) lst lst' |>
-            List.map check |>
-              foldM (&&) (unit True)
+          if List.length lst == List.length lst' then
+            List.map2 (,) lst lst' |>
+              List.map check |>
+                foldM (&&) (unit True)
+          else
+            error (spec, x)
         otherwise ->
           error (spec, x)
     
@@ -142,12 +151,20 @@ check (spec, impl) =
 
 spec = All Nat (\x ->
                   Conj [ Exists Nat (\y -> suc (x, y))
-                       , Exists Nat (\y -> suc (y, y))
+                       , Exists Nat (\y -> suc (x, y))
+                       ]
+               )
+
+axiom = All Nat (\x ->
+                  Conj [ Exists Nat (\y -> suc (x, y))
                        ]
                )
 
 mocked = mock spec
 
+byhand axiom =
+  axiom
+
 main = show <|
-  (check (spec, mocked)
+  (check (spec, byhand (mock axiom))
   ) { lastId = 0, errors = [] }
