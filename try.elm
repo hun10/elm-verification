@@ -32,6 +32,7 @@ type Spec
   = Prim Type
   | Error
   | Pred Predicate
+  | Conj (List Spec)
   | All (Id -> Type) (Spec -> Spec)
   | Exists (Id -> Type) (Spec -> Spec)
 
@@ -47,6 +48,7 @@ type Impl
   = IPrim Type
   | IPred Predicate
   | IError
+  | IList (List (M Impl))
   | IFun (Impl -> M Impl)
   | IWitness Impl (M Impl)
 
@@ -58,6 +60,10 @@ mock spec =
     
     Pred p ->
       unit <| IPred p
+    
+    Conj list ->
+      unit <| IList
+        (List.map mock list)
     
     All typeC specC ->
       unit <| IFun (\arg ->
@@ -73,12 +79,23 @@ mock spec =
         let t = typeC id in
           unit <| IWitness (IPrim t) (mock <| specC (Prim t))
 
-spec = All Nat (\x -> Exists Nat (\y -> suc (x, y)))
+spec = All Nat (\x ->
+                  Conj [ Exists Nat (\y -> suc (x, y))
+                       , Exists Nat (\y -> suc (y, y))
+                       ]
+               )
+
 mocked = mock spec
 
 main = show <|
   (newId *> (\n -> mocked *>
        (\(IFun x) -> x (IPrim (Nat n)))
      ) *>
-     (\(IWitness w x) -> x)
+     (\(IList [a, b]) ->
+       a *> (\(IWitness w x) ->
+         b *> (\(IWitness w' x') ->
+           x
+         )
+       )
+     )
   ) { lastId = 0 }
