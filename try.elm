@@ -27,9 +27,16 @@ error msg ctx =
 (*>) : M a -> (a -> M b) -> M b
 (*>) first second ctx = first ctx |> uncurry second
 
+lift : (a -> b -> c) -> (M a -> M b -> M c)
+lift simple =
+  \a -> \b ->
+    a *> \x ->
+      b *> \y ->
+        unit (simple x y)
+
 foldM : (a -> b -> b) -> M b -> List (M a) -> M b
 foldM folder start list =
-  start
+  List.foldl (lift folder) start list
 
 type Type
   = Nat Id
