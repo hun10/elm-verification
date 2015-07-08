@@ -225,8 +225,7 @@ byhand =
     \(IFun axiom) ->
       func <|
         \x ->
-          axiom x *> \ex ->
-            list [unit ex, unit ex]
+          list [axiom x, axiom x]
 
 
 main = show <|
