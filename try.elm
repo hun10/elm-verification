@@ -186,30 +186,13 @@ check (spec, impl) =
           error (spec, x)
 
 
-spec = All Nat (\x ->
-                  Conj [ Exists Nat (\y -> suc (x, y))
-                       , Exists Nat (\y -> suc (x, y))
-                       ]
-               )
-
-
-axiom = All Nat (\x -> Exists Nat (\y -> suc (x, y)))
-
-
-axiom2 = All Nat (\x -> suc (x, x))
-
-
-theorem = Imp axiom spec
-
-
 call mImpl arg =
   mImpl *> \(IFun fun) ->
     fun arg
 
 
 func closure =
-  unit <|
-    IFun closure
+  unit <| IFun closure
 
 
 list lst =
@@ -218,6 +201,24 @@ list lst =
 
 exists witness evidence =
   unit <| IList [unit witness, evidence]
+
+
+spec =
+  All Nat <| \x ->
+    Conj [ Exists Nat <| \y -> suc (x, y)
+         , Exists Nat <| \y -> suc (x, y)
+         ]
+
+
+axiom =
+  All Nat <| \x ->
+    Exists Nat <| \y -> suc (x, y)
+
+
+axiom2 = All Nat <| \x -> suc (x, x)
+
+
+theorem = Imp axiom spec
 
 
 byhand =
@@ -229,5 +230,5 @@ byhand =
 
 
 main = show <|
-  (check (theorem, byhand)
-  ) { lastId = 0, errors = [] }
+  check (theorem, byhand)
+    { lastId = 0, errors = [] }
