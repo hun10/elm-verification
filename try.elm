@@ -143,14 +143,12 @@ check (spec, impl) =
       
       (All tc sc, IFun fun) ->
         newId *> \id ->
-          let v = tc id
-              s = sc (Prim v) in
-            check (s, fun (IPrim v))
+          let v = tc id in
+            check (sc (Prim v), fun (IPrim v))
       
       (Exists tc sc, IList [mp, i]) ->
         mp *> \(IPrim t) ->
-          let s = sc (Prim t) in
-            check (s, i)
+          check (sc (Prim t), i)
       
       otherwise ->
         error (spec, impl)
