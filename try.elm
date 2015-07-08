@@ -199,6 +199,8 @@ axiom = All Nat (\x -> Exists Nat (\y -> suc (x, y)))
 axiom2 = All Nat (\x -> suc (x, x))
 
 
+theorem = Imp axiom spec
+
 mocked = mock spec
 
 
@@ -220,11 +222,15 @@ exists witness evidence =
   unit <| IList [unit witness, evidence]
 
 
-byhand axiom =
+byhand =
   func <|
-    \x -> list [exists x (axiom x), exists x (axiom x)]
+    \(IFun axiom) ->
+      func <|
+        \x ->
+          axiom x *> \ex ->
+            list [unit ex, unit ex]
 
 
 main = show <|
-  (check (spec, byhand (call <| mock axiom2))
+  (check (theorem, byhand)
   ) { lastId = 0, errors = [] }
