@@ -81,7 +81,6 @@ type Impl
   | IError
   | IList (List (M Impl))
   | IFun (Impl -> M Impl)
-  | IWitness Impl (M Impl)
 
 
 mock : Spec -> M Impl
@@ -117,7 +116,7 @@ mock spec =
     Exists typeC specC ->
       newId *> \id ->
         let t = typeC id in
-          unit <| IWitness (IPrim t) (mock <| specC (Prim t))
+          unit <| IList [unit <| IPrim t, mock <| specC (Prim t)]
 
 check : (Spec, M Impl) -> M Bool
 check (spec, impl) =
@@ -178,9 +177,10 @@ check (spec, impl) =
     
     Exists tc sc ->
       impl *> \x -> case x of
-        IWitness (IPrim t) i ->
-          let s = sc (Prim t) in
-            check (s, i)
+        IList [mp, i] ->
+          mp *> \(IPrim t) ->
+            let s = sc (Prim t) in
+              check (s, i)
         
         otherwise ->
           error (spec, x)
@@ -217,7 +217,7 @@ list lst =
 
 
 exists witness evidence =
-  unit <| IWitness witness evidence
+  unit <| IList [unit witness, evidence]
 
 
 byhand axiom =
