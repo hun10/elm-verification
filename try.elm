@@ -118,72 +118,42 @@ mock spec =
         let t = typeC id in
           unit <| IList [unit <| IPrim t, mock <| specC (Prim t)]
 
+
 check : (Spec, M Impl) -> M Bool
 check (spec, impl) =
-  case spec of
-    Prim t ->
-      impl *> \x -> case x of
-        IPrim t' ->
-          if t == t' then
-            unit True
-          else
-            error (spec, x)
-        
-        otherwise ->
-          error (spec, x)
-    
-    Pred p ->
-      impl *> \x -> case x of
-        IPred p' ->
-          if p == p' then
-            unit True
-          else
-            error (spec, x)
-        
-        otherwise ->
-          error (spec, x)
-    
-    Conj lst ->
-      impl *> \x -> case x of
-        IList lst' ->
-          if List.length lst == List.length lst' then
-            List.map2 (,) lst lst' |>
-              List.map check |>
-                foldM (&&) (unit True)
-          else
-            error (spec, x)
-        
-        otherwise ->
-          error (spec, x)
-    
-    Imp s1 s2 ->
-      impl *> \x -> case x of
-        IFun fun ->
-          mock s1 *> fun *> \r ->
-            check (s2, unit r)
-        otherwise ->
-          error (spec, x)
-    
-    All tc sc ->
-      impl *> \x -> case x of
-        IFun fun ->
-          newId *> \id ->
-            let v = tc id
-                s = sc (Prim v) in
-              check (s, fun (IPrim v))
-        
-        otherwise ->
-          error (spec, x)
-    
-    Exists tc sc ->
-      impl *> \x -> case x of
-        IList [mp, i] ->
-          mp *> \(IPrim t) ->
-            let s = sc (Prim t) in
-              check (s, i)
-        
-        otherwise ->
-          error (spec, x)
+  impl *> \impl ->
+    case (spec, impl) of
+      (Prim t, IPrim t) ->
+        unit True
+      
+      (Pred t, IPred t) ->
+        unit True
+      
+      (Conj lst, IList lst') ->
+        if List.length lst == List.length lst' then
+          List.map2 (,) lst lst' |>
+            List.map check |>
+              foldM (&&) (unit True)
+        else
+          error (spec, impl)
+      
+      (Imp s1 s2, IFun fun) ->
+        mock s1 *> fun *> \r ->
+          check (s2, unit r)
+      
+      (All tc sc, IFun fun) ->
+        newId *> \id ->
+          let v = tc id
+              s = sc (Prim v) in
+            check (s, fun (IPrim v))
+      
+      (Exists tc sc, IList [mp, i]) ->
+        mp *> \(IPrim t) ->
+          let s = sc (Prim t) in
+            check (s, i)
+      
+      otherwise ->
+        error (spec, impl)
 
 
 call mImpl arg =
