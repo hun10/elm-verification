@@ -66,8 +66,8 @@ suc (x, y) =
 
 
 type Spec
-  = Prim Type
-  | Error
+  = Error
+  | Prim Type
   | Pred Predicate
   | Conj (List Spec)
   | Imp Spec Spec
@@ -76,9 +76,9 @@ type Spec
 
 
 type Impl
-  = IPrim Type
+  = IError
+  | IPrim Type
   | IPred Predicate
-  | IError
   | IList (List (M Impl))
   | IFun (Impl -> M Impl)
 
