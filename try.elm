@@ -137,23 +137,6 @@ type Impl
   | IFun (Impl -> M Impl)
 
 
-type Type
-  = Nat Id
-
-
-type Predicate
-  = Suc (Type, Type)
-
-
-suc (x, y) =
-  case (x, y) of
-    (Prim (Nat x), Prim (Nat y)) ->
-      Pred (Suc (Nat x, Nat y))
-
-    otherwise ->
-      Error
-
-
 call mImpl arg =
   mImpl *> \(IFun fun) ->
     fun arg
@@ -169,6 +152,23 @@ list lst =
 
 exists witness evidence =
   unit <| IList [unit witness, evidence]
+
+
+type Type
+  = Nat Id
+
+
+type Predicate
+  = Suc (Type, Type)
+
+
+suc (x, y) =
+  case (x, y) of
+    (Prim (Nat x), Prim (Nat y)) ->
+      Pred <| Suc (Nat x, Nat y)
+
+    otherwise ->
+      Error
 
 
 spec =
