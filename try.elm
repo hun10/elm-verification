@@ -20,17 +20,6 @@ unit : a -> M a
 unit v ctx = (v, ctx)
 
 
-newId : M Int
-newId ctx =
-  let id = ctx.lastId + 1 in
-    (id, { ctx | lastId <- id })
-
-
-error : (Spec, Impl) -> M Bool
-error msg ctx =
-  (False, { ctx | errors <- ctx.errors ++ [msg] })
-
-
 (*>) : M a -> (a -> M b) -> M b
 (*>) first second ctx = first ctx |> uncurry second
 
@@ -48,12 +37,32 @@ foldM folder start list =
   List.foldl (lift folder) start list
 
 
+newId : M Int
+newId ctx =
+  let id = ctx.lastId + 1 in
+    (id, { ctx | lastId <- id })
+
+
+error : (Spec, Impl) -> M Bool
+error msg ctx =
+  (False, { ctx | errors <- ctx.errors ++ [msg] })
+
+
 type Type
   = Nat Id
 
 
 type Predicate
   = Suc (Type, Type)
+
+
+suc (x, y) =
+  case (x, y) of
+    (Prim (Nat x), Prim (Nat y)) ->
+      Pred (Suc (Nat x, Nat y))
+
+    otherwise ->
+      Error
 
 
 type Spec
@@ -64,15 +73,6 @@ type Spec
   | Imp Spec Spec
   | All (Id -> Type) (Spec -> Spec)
   | Exists (Id -> Type) (Spec -> Spec)
-
-
-suc (x, y) =
-  case (x, y) of
-    (Prim (Nat x), Prim (Nat y)) ->
-      Pred (Suc (Nat x, Nat y))
-
-    otherwise ->
-      Error
 
 
 type Impl
@@ -200,8 +200,6 @@ axiom2 = All Nat (\x -> suc (x, x))
 
 
 theorem = Imp axiom spec
-
-mocked = mock spec
 
 
 call mImpl arg =
