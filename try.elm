@@ -48,41 +48,6 @@ error msg ctx =
   (False, { ctx | errors <- ctx.errors ++ [msg] })
 
 
-type Type
-  = Nat Id
-
-
-type Predicate
-  = Suc (Type, Type)
-
-
-suc (x, y) =
-  case (x, y) of
-    (Prim (Nat x), Prim (Nat y)) ->
-      Pred (Suc (Nat x, Nat y))
-
-    otherwise ->
-      Error
-
-
-type Spec
-  = Error
-  | Prim Type
-  | Pred Predicate
-  | Conj (List Spec)
-  | Imp Spec Spec
-  | All (Id -> Type) (Spec -> Spec)
-  | Exists (Id -> Type) (Spec -> Spec)
-
-
-type Impl
-  = IError
-  | IPrim Type
-  | IPred Predicate
-  | IList (List (M Impl))
-  | IFun (Impl -> M Impl)
-
-
 mock : Spec -> M Impl
 mock spec =
   case spec of
@@ -152,6 +117,41 @@ check (spec, impl) =
       
       otherwise ->
         error (spec, impl)
+
+
+type Spec
+  = Error
+  | Prim Type
+  | Pred Predicate
+  | Conj (List Spec)
+  | Imp Spec Spec
+  | All (Id -> Type) (Spec -> Spec)
+  | Exists (Id -> Type) (Spec -> Spec)
+
+
+type Impl
+  = IError
+  | IPrim Type
+  | IPred Predicate
+  | IList (List (M Impl))
+  | IFun (Impl -> M Impl)
+
+
+type Type
+  = Nat Id
+
+
+type Predicate
+  = Suc (Type, Type)
+
+
+suc (x, y) =
+  case (x, y) of
+    (Prim (Nat x), Prim (Nat y)) ->
+      Pred (Suc (Nat x, Nat y))
+
+    otherwise ->
+      Error
 
 
 call mImpl arg =
