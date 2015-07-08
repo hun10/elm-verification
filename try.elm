@@ -62,7 +62,7 @@ mock spec =
     
     Disj list ->
       unit <| INondeterm
-        (List.indexedMap (\i -> \o -> (i, mock o)) list)
+        (List.indexedMap (\i -> \o -> (i + 1, mock o)) list)
     
     Imp s1 s2 ->
       unit <| IFun (\arg ->
