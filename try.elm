@@ -1,5 +1,4 @@
 import Graphics.Element exposing (show)
--- With no disjunction for now.
 
 
 type alias Id =
@@ -61,6 +60,10 @@ mock spec =
       unit <| IList
         (List.map mock list)
     
+    Disj list ->
+      unit <| INondeterm
+        (List.indexedMap (\i -> \o -> (i, mock o)) list)
+    
     Imp s1 s2 ->
       unit <| IFun (\arg ->
         check (s1, unit arg) *> \chk ->
@@ -102,6 +105,17 @@ check (spec, impl) =
         else
           error (spec, impl)
       
+      (Disj lst, IOption (id, opt)) ->
+        if id >= 1 && id <= List.length lst then
+          case List.drop (id - 1) lst |> List.take 1 of
+            [optSpec] ->
+              check (optSpec, opt)
+            
+            otherwise ->
+              error (spec, impl)
+        else
+          error (spec, impl)
+      
       (Imp s1 s2, IFun fun) ->
         mock s1 *> fun *> \r ->
           check (s2, unit r)
@@ -115,6 +129,24 @@ check (spec, impl) =
         mp *> \(IPrim t) ->
           check (sc (Prim t), i)
       
+      (_, ICase (IOption (id, opt)) lst) ->
+        if id >= 1 && id <= List.length lst then
+          case List.drop (id - 1) lst |> List.take 1 of
+            [caseImpl] ->
+              check (spec, opt *> caseImpl)
+            
+            otherwise ->
+              error (spec, impl)
+        else
+          error (spec, impl)
+      
+      (_, ICase (INondeterm optList) lst) ->
+        if List.length lst == List.length optList then
+          List.map2 (\(id, o) -> \c -> check (spec, o *> c)) optList lst |>
+            foldM (&&) (unit True)
+        else
+          error (spec, impl)
+      
       otherwise ->
         error (spec, impl)
 
@@ -124,6 +156,7 @@ type Spec
   | Prim Type
   | Pred Predicate
   | Conj (List Spec)
+  | Disj (List Spec)
   | Imp Spec Spec
   | All (Id -> Type) (Spec -> Spec)
   | Exists (Id -> Type) (Spec -> Spec)
@@ -134,6 +167,9 @@ type Impl
   | IPrim Type
   | IPred Predicate
   | IList (List (M Impl))
+  | IOption (Id, M Impl)
+  | INondeterm (List (Id, M Impl)) -- non-deterministic option, for check only
+  | ICase Impl (List (Impl -> M Impl))
   | IFun (Impl -> M Impl)
 
 
