@@ -222,15 +222,20 @@ axiom =
 axiom2 = All Nat <| \x -> suc (x, x)
 
 
-theorem = Imp axiom spec
+theorem = Imp (Disj [axiom, axiom2]) spec
 
 
 byhand =
   func <|
-    \(IFun axiom) ->
-      func <|
-        \x ->
-          list [axiom x, axiom x]
+    \opt ->
+      unit <| ICase opt
+        [ \(IFun ax) ->
+            func <| \x ->
+              list [ax x, ax x]
+        , \(IFun ax) ->
+            func <| \x ->
+              list [exists x (ax x), exists x (ax x)]
+        ]
 
 
 main = show <|
