@@ -62,7 +62,7 @@ mock spec =
     
     Disj list ->
       unit <| INondeterm
-        (List.indexedMap (\i -> \o -> (i + 1, mock o)) list)
+        (List.indexedMap (\i -> \o -> unit <| IOption (i + 1, mock o)) list)
     
     Imp s1 s2 ->
       unit <| IFun (\arg ->
@@ -129,23 +129,9 @@ check (spec, impl) =
         mp *> \(IPrim t) ->
           check (sc (Prim t), i)
       
-      (_, ICase (IOption (id, opt)) lst) ->
-        if id >= 1 && id <= List.length lst then
-          case List.drop (id - 1) lst |> List.take 1 of
-            [caseImpl] ->
-              check (spec, opt *> caseImpl)
-            
-            otherwise ->
-              error (spec, impl)
-        else
-          error (spec, impl)
-      
-      (_, ICase (INondeterm optList) lst) ->
-        if List.length lst == List.length optList then
-          List.map2 (\(id, o) -> \c -> check (spec, o *> c)) optList lst |>
-            foldM (&&) (unit True)
-        else
-          error (spec, impl)
+      (_, INondeterm list) ->
+        List.map (\x -> check (spec, x)) list |>
+          foldM (&&) (unit True)
       
       otherwise ->
         error (spec, impl)
@@ -168,9 +154,27 @@ type Impl
   | IPred Predicate
   | IList (List (M Impl))
   | IOption (Id, M Impl)
-  | INondeterm (List (Id, M Impl)) -- non-deterministic option, for check only
-  | ICase Impl (List (Impl -> M Impl))
+  | INondeterm (List (M Impl)) -- non-deterministic option, for check only
   | IFun (Impl -> M Impl)
+
+
+switch : Impl -> List (Impl -> M Impl) -> M Impl
+switch opt list =
+  case opt of
+    INondeterm opts ->
+      unit <| INondeterm (List.map (\x -> x *> \x -> switch x list) opts)
+    
+    IOption (id, var) ->
+      case List.drop (id - 1) list |> List.take 1 of
+        [func] ->
+          var *> \v ->
+            func v
+            
+        otherwise ->
+          unit IError
+    
+    otherwise ->
+      unit IError
 
 
 call mImpl arg =
@@ -228,7 +232,7 @@ theorem = Imp (Disj [axiom, axiom2]) spec
 byhand =
   func <|
     \opt ->
-      unit <| ICase opt
+      switch opt
         [ \(IFun ax) ->
             func <| \x ->
               list [ax x, ax x]
