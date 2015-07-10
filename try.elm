@@ -178,7 +178,7 @@ switch opt list =
 
 
 call mImpl arg =
-  mImpl *> \(IFun fun) ->
+  (unit mImpl) *> \(IFun fun) ->
     fun arg
 
 
@@ -233,12 +233,12 @@ byhand =
   func <|
     \opt ->
       switch opt
-        [ \(IFun ax) ->
+        [ \ax ->
             func <| \x ->
-              list [ax x, ax x]
-        , \(IFun ax) ->
+              list [call ax x, call ax x]
+        , \ax ->
             func <| \x ->
-              list [exists x (ax x), exists x (ax x)]
+              list [exists x (call ax x), exists x (call ax x)]
         ]
 
 
